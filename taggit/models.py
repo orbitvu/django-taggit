@@ -9,11 +9,16 @@ from django.template.defaultfilters import slugify as default_slugify
 from django.utils.translation import ugettext_lazy as _, ugettext
 from django.utils.encoding import python_2_unicode_compatible
 
+if hasattr(django.conf.settings, 'AUTH_USER_MODEL'):
+    USER_MODEL = django.conf.settings.AUTH_USER_MODEL
+else:
+    from django.contrib.auth.models import User as USER_MODEL
 
 @python_2_unicode_compatible
 class TagBase(models.Model):
     name = models.CharField(verbose_name=_('Name'), unique=True, max_length=100)
     slug = models.SlugField(verbose_name=_('Slug'), unique=True, max_length=100)
+    user = models.ForeignKey(USER_MODEL, verbose_name=_('User'), null=True, blank=True)
 
     def __str__(self):
         return self.name

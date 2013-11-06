@@ -325,7 +325,7 @@ class _TaggableManager(models.Manager):
         return self.through.lookup_kwargs(self.instance)
 
     @require_instance_manager
-    def add(self, *tags):
+    def add(self, user, *tags):
         str_tags = set([
             t
             for t in tags
@@ -340,23 +340,23 @@ class _TaggableManager(models.Manager):
         tag_objs.update(existing)
 
         for new_tag in str_tags - set(t.name for t in existing):
-            tag_objs.add(self.through.tag_model().objects.create(name=new_tag))
+            tag_objs.add(self.through.tag_model().objects.create(user=user, name=new_tag))
 
         for tag in tag_objs:
             self.through.objects.get_or_create(tag=tag, **self._lookup_kwargs())
 
     @require_instance_manager
-    def names(self):
-        return self.get_query_set().values_list('name', flat=True)
+    def names(self, user):
+        return self.get_query_set().filter(user=user).values_list('name', flat=True)
 
     @require_instance_manager
-    def slugs(self):
-        return self.get_query_set().values_list('slug', flat=True)
+    def slugs(self, user):
+        return self.get_query_set().filter(user=user).values_list('slug', flat=True)
 
     @require_instance_manager
-    def set(self, *tags):
-        self.clear()
-        self.add(*tags)
+    def set(self, user, *tags):
+        self.clear(user)
+        self.add(user, *tags)
 
     @require_instance_manager
     def remove(self, *tags):
@@ -364,19 +364,19 @@ class _TaggableManager(models.Manager):
             tag__name__in=tags).delete()
 
     @require_instance_manager
-    def clear(self):
-        self.through.objects.filter(**self._lookup_kwargs()).delete()
+    def clear(self, user):
+        self.through.objects.filter(user=user).filter(**self._lookup_kwargs()).delete()
 
-    def most_common(self):
-        return self.get_query_set().annotate(
+    def most_common(self, user):
+        return self.get_query_set().filter(user=user).annotate(
             num_times=models.Count(self.through.tag_relname())
         ).order_by('-num_times')
 
     @require_instance_manager
-    def similar_objects(self):
+    def similar_objects(self, user):
         lookup_kwargs = self._lookup_kwargs()
         lookup_keys = sorted(lookup_kwargs)
-        qs = self.through.objects.values(*six.iterkeys(lookup_kwargs))
+        qs = self.through.objects.filter(user=user).values(*six.iterkeys(lookup_kwargs))
         qs = qs.annotate(n=models.Count('pk'))
         qs = qs.exclude(**lookup_kwargs)
         qs = qs.filter(tag__in=self.all())

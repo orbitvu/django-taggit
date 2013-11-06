@@ -12,9 +12,9 @@ class TagAdmin(admin.ModelAdmin):
     inlines = [
         TaggedItemInline
     ]
-    list_display = ["name", "slug"]
-    ordering = ["name", "slug"]
-    search_fields = ["name"]
+    list_display = ["user", "name", "slug"]
+    ordering = ["user", "name", "slug"]
+    search_fields = ["user", "name"]
     prepopulated_fields = {"slug": ["name"]}
 
 
