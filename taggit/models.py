@@ -16,8 +16,8 @@ else:
 
 @python_2_unicode_compatible
 class TagBase(models.Model):
-    name = models.CharField(verbose_name=_('Name'), unique=True, max_length=100)
-    slug = models.SlugField(verbose_name=_('Slug'), unique=True, max_length=100)
+    name = models.CharField(verbose_name=_('Name'), max_length=100)
+    slug = models.SlugField(verbose_name=_('Slug'), max_length=100)
     user = models.ForeignKey(USER_MODEL, verbose_name=_('User'), null=True, blank=True)
 
     def __str__(self):
@@ -25,6 +25,7 @@ class TagBase(models.Model):
 
     class Meta:
         abstract = True
+        unique_together = ('name', 'user',)
 
     def save(self, *args, **kwargs):
         if not self.pk and not self.slug:
