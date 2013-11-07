@@ -2,7 +2,7 @@ from __future__ import unicode_literals
 
 from django.contrib import admin
 
-from taggit.models import Tag, TaggedItem
+from taggit.models import Tag, TaggedItem, TagGroup
 
 
 class TaggedItemInline(admin.StackedInline):
@@ -19,3 +19,5 @@ class TagAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Tag, TagAdmin)
+
+admin.site.register(TagGroup)

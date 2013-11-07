@@ -19,13 +19,14 @@ class TagBase(models.Model):
     name = models.CharField(verbose_name=_('Name'), max_length=100)
     slug = models.SlugField(verbose_name=_('Slug'), max_length=100)
     user = models.ForeignKey(USER_MODEL, verbose_name=_('User'), null=True, blank=True)
+    group = models.ForeignKey("TagGroup", verbose_name=_('Group'), null=True, blank=True, related_name='tags')
 
     def __str__(self):
         return self.name
 
     class Meta:
         abstract = True
-        unique_together = ('name', 'user',)
+        unique_together = ('name', 'user', 'group')
 
     def save(self, *args, **kwargs):
         if not self.pk and not self.slug:
@@ -63,6 +64,49 @@ class Tag(TagBase):
     class Meta:
         verbose_name = _("Tag")
         verbose_name_plural = _("Tags")
+
+
+class TagGroup(models.Model):
+    name = models.CharField(verbose_name=_('Name'), max_length=100)
+    slug = models.SlugField(verbose_name=_('Slug'), max_length=100)
+    user = models.ForeignKey(USER_MODEL, verbose_name=_('User'), null=True, blank=True)
+
+    def slugify(self, tag, i=None):
+        slug = default_slugify(tag)
+        if i is not None:
+            slug += "_%d" % i
+        return slug
+
+    def save(self, *args, **kwargs):
+        if not self.pk and not self.slug:
+            self.slug = self.slugify(self.name)
+            from django.db import router
+            using = kwargs.get("using") or router.db_for_write(
+                type(self), instance=self)
+            # Make sure we write to the same db for all attempted writes,
+            # with a multi-master setup, theoretically we could try to
+            # write and rollback on different DBs
+            kwargs["using"] = using
+            trans_kwargs = {"using": using}
+            i = 0
+            while True:
+                i += 1
+                try:
+                    sid = transaction.savepoint(**trans_kwargs)
+                    res = super(TagGroup, self).save(*args, **kwargs)
+                    transaction.savepoint_commit(sid, **trans_kwargs)
+                    return res
+                except IntegrityError:
+                    transaction.savepoint_rollback(sid, **trans_kwargs)
+                    self.slug = self.slugify(self.name, i)
+        else:
+            return super(TagGroup, self).save(*args, **kwargs)
+
+    class Meta:
+        unique_together = ('name', 'user',)
+        verbose_name = _("Tag group")
+        verbose_name_plural = _("Tag groups")
+        ordering = ('name', )
 
 
 @python_2_unicode_compatible
